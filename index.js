@@ -108,25 +108,30 @@ Public.connect = args => new Promise((resolve, reject) => {
 	})
 
 	socket.on('consumption', payload => {
-		listener({
-			produce: params => {
 
-				if(!params.topic) throw new Error('Producers must include a topic.')
-				if(!params.data) throw new Error(`Key, 'data', must not be empty.`)
-				
-				const production_payload = {
-					topic: params.topic,
-					stream_id: payload.stream_id,
-					channel: payload.channel,
-					data: params.data,
-				}
+		listeners.forEach(listener => {
+			
+			listener({
+				produce: params => {
 
-				socket.emit('production', production_payload)
-			},
-			payload: payload,
-			topics: payload.topics,
-			data: payload.data,
+					if(!params.topic) throw new Error('Producers must include a topic.')
+					if(!params.data) throw new Error(`Key, 'data', must not be empty.`)
+					
+					const production_payload = {
+						topic: params.topic,
+						stream_id: payload.stream_id,
+						channel: payload.channel,
+						data: params.data,
+					}
+
+					socket.emit('production', production_payload)
+				},
+				payload: payload,
+				topics: payload.topics,
+				data: payload.data,
+			})
 		})
+
 	})
 
 	socket.on('error', console.error)
