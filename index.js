@@ -58,86 +58,160 @@ const normalizeArray = producer => {
  * Public Functions
  ***********************************************************************/
 
-const Public = {}
+const client = () => {
 
-
-Public.connect = args => new Promise((resolve, reject) => {
-
-	console.log(`connecting to server at ${args.uri}`)
-
-	const init = {
-		username: args.username,
-		password: args.password,
-		operator: args.operator,
-		environment: args.environment,
-		consume: normalizeConsumer(args.consume),
-		produce: normalizeArray(args.produce),
-		channels: normalizeArray(args.channels),
+	const pack = {
+		args: {
+			channels: ['default'],
+			environment: 'default',
+		}
 	}
 
-	var socket = io.connect(args.uri, {
-		query: {
-			init:JSON.stringify(init)
+	const funcs = ['task', 'operator', 'channels', 'produce', 'username', 'password', 'token']
+
+	funcs.forEach(key => {
+		pack[key] = arg => {
+			pack.args[key] = arg
+			return pack
 		}
 	})
 
+	pack.consume = (consumer, args) => {
 
-	const listeners = []
+		consumer = normalizeArray(consumer)
 
-	socket.on('connect', response => {
-	
-		console.log('Successfully connected.')
+		const config = {}
 
-		resolve({
+		config[args.gather ? 'and' : 'or'] = consumer
 
-			consume: func => {
-				listeners.push(func)
-			},
+		pack.args.consume = config
 
-			produce: params => {
+		return pack
+	}
 
-				if(!params.topic) throw new Error('Producers must include a topic.')
-				if(!params.channel) throw new Error('Raw production must include a channel.')
-				if(!params.data) throw new Error(`Key, 'data', must not be empty.`)
+	pack.connect = uri => new Promise((resolve, reject) => {
 
-				console.log('producing: ', params.topic)
+		console.log(`connecting to server at ${uri}`)
 
-				socket.emit('production', params)
+		const init = {
+			username: pack.args.username,
+			password: pack.args.password,
+			operator: pack.args.task,
+			environment: pack.args.environment,
+			consume: normalizeConsumer(pack.args.consume),
+			produce: normalizeArray(pack.args.produce),
+			channels: normalizeArray(pack.args.channels),
+		}
+
+		var socket = io.connect(uri, {
+			query: {
+				init:JSON.stringify(init)
 			}
 		})
-	})
 
-	socket.on('consumption', payload => {
 
-		listeners.forEach(listener => {
-			
-			listener({
-				produce: params => {
+		const consumers = {}
 
-					if(!params.topic) throw new Error('Producers must include a topic.')
-					if(!params.data) throw new Error(`Key, 'data', must not be empty.`)
-					
-					const production_payload = {
-						topic: params.topic,
-						stream_id: payload.stream_id,
-						channel: payload.channel,
-						data: params.data,
+		let gatherer
+
+		socket.on('connect', response => {
+		
+			console.log('Successfully connected.')
+
+			resolve({
+
+				consume: (topics, func) => {
+					if(typeof topics === 'function'){
+						func = topics
+						topics = ['*']
 					}
 
-					socket.emit('production', production_payload)
+					topics = normalizeArray(topics)
+
+					topics.forEach(topic => {
+						if(consumers[topic] || consumers['*']) throw Error(`Consumer for topic '${topic}' has already been registered.`)
+						consumers[topic] = func
+					})
 				},
-				payload: payload,
-				topics: payload.topics,
-				data: payload.data,
+
+				gather: func => {
+					if(Object.keys(consumers).length > 0) throw Error('Gather listens for all topics and can not be used with consume.')
+					gatherer = func
+				},
+
+				produce: (topic, data, channel) => {
+					console.log(pack.args.channels)
+
+					if(!channel && pack.args.channels.length === 1 && pack.args.channels[0] === 'default'){
+						channel = 'default'
+					}
+
+					if(!topic) throw new Error('Producers must include a topic.')
+					if(!data) throw new Error(`Key, 'data', must not be empty.`)
+					if(!channel) throw new Error('Raw production must include a channel.')
+
+					console.log('producing: ', topic)
+
+					socket.emit('production', {topic: topic, channel: channel, data:data})
+				}
 			})
 		})
 
+		socket.on('consumption', payload => {
+
+			console.log(payload)
+
+			const produce = (topic, params) => {
+
+				if(!topic) throw new Error('Producers must include a topic.')
+				if(!data) throw new Error(`Key, 'data', must not be empty.`)
+				
+				const production_payload = {
+					topic: topic,
+					data: data,
+					stream_id: payload.stream_id,
+					channel: payload.channel,
+				}
+
+				socket.emit('production', production_payload)
+			}
+
+
+
+			if(gatherer){
+				return gatherer({
+					produce: produce,
+					payload: payload,
+					topics: payload.topics,
+					data: payload.data,
+				})
+			}
+
+			payload.topics.forEach(topic => {
+
+				const consumer = consumers[topic] || consumers['*']
+				
+				if(consumer){
+					consumer({
+						produce: produce,
+						payload: payload,
+						topic: topic,
+						data: payload.data[topic],
+					})
+				}
+			})
+
+		})
+
+		socket.on('error', console.error)
+
+		socket.on('info', console.log)
 	})
 
-	socket.on('error', console.error)
+	return pack
+}
 
-	socket.on('info', console.log)
-})
+
 
 
 
@@ -147,4 +221,4 @@ Public.connect = args => new Promise((resolve, reject) => {
  * Public Export
  ***********************************************************************/
 
-module.exports = Public
+module.exports = client
