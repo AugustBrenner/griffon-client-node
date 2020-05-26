@@ -78,6 +78,8 @@ const client = () => {
 
 	pack.consume = (consumer, args) => {
 
+		args = args || {}
+
 		consumer = normalizeArray(consumer)
 
 		const config = {}
@@ -161,7 +163,7 @@ const client = () => {
 
 			console.log(payload)
 
-			const produce = (topic, params) => {
+			const produce = (topic, data) => {
 
 				if(!topic) throw new Error('Producers must include a topic.')
 				if(!data) throw new Error(`Key, 'data', must not be empty.`)

@@ -1,6 +1,6 @@
 {
   "name": "griffon-client",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "homepage": "https://github.com/AugustBrenner/griffon-client-node",
   "issues": "https://github.com/AugustBrenner/griffon-client-node/issues",
   "description": "Griffon client",
