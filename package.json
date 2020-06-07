@@ -1,6 +1,6 @@
 {
   "name": "griffon-client",
-  "version": "0.0.4",
+  "version": "0.1.1",
   "homepage": "https://github.com/AugustBrenner/griffon-client-node",
   "issues": "https://github.com/AugustBrenner/griffon-client-node/issues",
   "description": "Griffon client",
@@ -9,7 +9,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "August Ryan Brenner",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "socket.io-client": "^2.3.0"
   }
