@@ -152,16 +152,16 @@ const client = () => {
 					if(!data) throw new Error(`Key, 'data', must not be empty.`)
 					if(!channel) throw new Error('Raw production must include a channel.')
 
-					console.log('producing: ', topic)
+					// console.log('producing: ', topic)
 
 					socket.emit('production', {topic: topic, channel: channel, data:data})
 				}
 			})
 		})
 
-		socket.on('consumption', payload => {
+		socket.on('consumption', (payload, cb) => {
 
-			console.log(payload)
+			// console.log(payload)
 
 			const produce = (topic, data) => {
 
@@ -202,6 +202,8 @@ const client = () => {
 					})
 				}
 			})
+
+			cb({code: 200})
 
 		})
 
