@@ -169,6 +169,7 @@ const client = () => {
 				if(!data) throw new Error(`Key, 'data', must not be empty.`)
 				
 				const production_payload = {
+					completed_task_id: payload.task_id,
 					topic: topic,
 					data: data,
 					stream_id: payload.stream_id,
